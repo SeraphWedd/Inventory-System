@@ -68,6 +68,7 @@ class MainLoop():
             icon="question")
         
         if result == 'yes':
+            self._is_logged_in = False
             self.root.destroy()
             exit()
 
@@ -85,7 +86,9 @@ class MainLoop():
                                      command=self.account.show_add_user)
             self.accmenu.add_command(label="Remove User",
                                      command=self.account.show_remove_user)
-            self.accmenu.add_command(label="Edit Account", command=None)
+            self.accmenu.add_command(label="Edit Account",
+                                     command=self.account.show_edit_account)
+            self.accmenu.add_command(label="Change Password", command=None)
             self.accmenu.add_command(label="View All Users", command=None)
             self.menubar.add_cascade(label="Account", menu=self.accmenu)
             
@@ -93,6 +96,7 @@ class MainLoop():
             self.invmenu.add_command(label='Add', command=None)
             self.invmenu.add_command(label='Remove', command=None)
             self.invmenu.add_command(label='Search', command=None)
+            self.invmenu.add_command(label='View All Items', command=None)
             self.menubar.add_cascade(label='Inventory', menu=self.invmenu)
 
         self.helpmenu = Menu(self.root, tearoff=0)

@@ -270,7 +270,7 @@ class AccountManagement():
                 (self.username.get(),)
                 )
             if self.cursor.fetchone() is None: #Username not found!
-                self.lbl_warn.config(text="Username do not exists!",
+                self.lbl_warn.config(text="Username do not exist!",
                                      fg="red")
             else: #Check if password match
                 #Search for user&pass from database
@@ -303,3 +303,105 @@ class AccountManagement():
                 
         self.cursor.close()
         self.conn.close()
+
+    def show_edit_account(self):
+        self.form = Toplevel(self.master)
+        self.form.title("Edit Account")
+        self.w = 400
+        self.h = 200
+        x = self.master.winfo_screenwidth()//2 - self.w//2
+        y = self.master.winfo_screenheight()//2 - self.h//2
+        self.form.geometry("%dx%d+%d+%d" %(self.w, self.h, x, y))
+        self.form.config(bg="#77ddff")
+        self.form.resizable(0, 0)
+
+        self.edit_account_form()
+        self.form.transient(self.master)
+        self.form.grab_set()
+        self.master.wait_window(self.form)
+
+    def edit_account_form(self):
+        #Frames
+        toplevel = Frame(self.form, width=self.w,
+                         height=self.h*.6, bd=0,
+                         bg="#77ddff", relief=SOLID)
+        toplevel.pack(side=TOP, pady=5)
+        midlevel = Frame(self.form, width=self.w,
+                         height=self.h*.2, bd=0,
+                         bg="#77ddff", relief=SOLID)
+        midlevel.pack(side=TOP, pady=5)
+        bottomlvl = Frame(self.form, width=self.w,
+                          height=self.h*.2, bd=0,
+                         bg="#77ddff",  relief=SOLID)
+        bottomlvl.pack(side=TOP, pady=5)
+        #Labels
+        self.lbl_last = Label(toplevel, text="Last Name:",
+                              font=('arial', 14), bd=5,
+                              bg="#77ddff")
+        self.lbl_last.grid(row=0, column=0)
+        self.lbl_first = Label(toplevel, text="First Name:",
+                              font=('arial', 14), bd=5,
+                              bg="#77ddff")
+        self.lbl_first.grid(row=1, column=0)
+        #Entry boxes
+        self.last = Entry(toplevel, textvariable=self.lastname,
+                         font=('arial', 14), width=18)
+        self.last.grid(row=0, column=3)
+        self.first = Entry(toplevel, textvariable=self.firstname,
+                         font=('arial', 14), width=18)
+        self.first.grid(row=1, column=3)
+        self.lastname.set(self.main.current_user[4])
+        self.firstname.set(self.main.current_user[5])
+
+        #Buttons
+        self.add_btn = Button(midlevel, text='Update',
+                              font=('arial', 14), width=15,
+                              command=self.edit_account)
+        self.add_btn.grid(row=0, column=0)
+        
+        self.lbl_warn = Label(bottomlvl, text="",
+                              font=('arial', 12), bd=5,
+                              bg="#77ddff")
+        self.lbl_warn.grid(row=0)
+        self.form.bind('<Return>', self.edit_account)
+    
+    def edit_account(self, event=None):
+        self.database()
+
+        if (self.firstname.get() == "" or self.lastname.get() == ""):
+            self.lbl_warn.config(text="Please enter the required values!",
+                                 fg="red")
+        else:
+            #Search for current user from database
+            self.cursor.execute(
+                "SELECT * FROM `Users` WHERE `admin_id` = ?",
+                (self.main.current_user[0],)
+                )
+            
+            if self.cursor.fetchone() is None: #Username not found!
+                self.lbl_warn.config(text="Account do not exist!",
+                                     fg="red")
+            else: #if found, edit the entries
+                self.cursor.execute(
+                    "UPDATE `Users` SET `lastname` = ?, "+
+                    "`firstname` = ? WHERE `admin_id` = ?",
+                    (self.lastname.get(), self.firstname.get(),
+                     self.main.current_user[0])
+                    )
+                self.conn.commit()
+                #Update current user
+                self.cursor.execute(
+                    "SELECT * FROM `Users` WHERE `admin_id` = ?",
+                    (self.main.current_user[0],)
+                    )
+                data = self.cursor.fetchone()
+                self.main.current_user = data
+                
+                tkMessageBox.showinfo(
+                    "Info",
+                    f"User {self.main.current_user[1]}'s "+
+                    "details updated successfully!"
+                    )
+                #Destroy form after use
+                self.reset_form()
+                self.form.destroy()
