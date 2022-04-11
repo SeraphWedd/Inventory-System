@@ -10,6 +10,7 @@ class AccountManagement():
 
         self.username = StringVar()
         self.password = StringVar()
+        self.new_pass = StringVar()
         self.conf_pass = StringVar()
         self.authority = StringVar()
         self.lastname = StringVar()
@@ -24,6 +25,7 @@ class AccountManagement():
     def reset_form(self):
         self.username.set("")
         self.password.set("")
+        self.new_pass.set("")
         self.conf_pass.set("")
         self.authority.set("")
         self.lastname.set("")
@@ -475,3 +477,169 @@ class AccountManagement():
                 #Destroy form after use
                 self.reset_form()
                 self.form.destroy()
+
+    def show_change_password(self):
+        self.form = Toplevel(self.master)
+        self.form.title("Change Password")
+        self.w = 400
+        self.h = 300
+        x = self.master.winfo_screenwidth()//2 - self.w//2
+        y = self.master.winfo_screenheight()//2 - self.h//2
+        self.form.geometry("%dx%d+%d+%d" %(self.w, self.h, x, y))
+        self.form.config(bg="#77ddff")
+        self.form.resizable(0, 0)
+
+        self.change_password_form()
+        self.form.transient(self.master)
+        self.form.grab_set()
+        self.master.wait_window(self.form)
+
+    def change_password_form(self):
+        #Frames
+        toplevel = Frame(
+            self.form, width=self.w, height=self.h*.2, bd=0,
+            bg="#77ddff", relief=SOLID
+        )
+        toplevel.pack(side=TOP, pady=5)
+        midlevel = Frame(
+            self.form, width=self.w, height=self.h*.6, bd=0,
+            bg="#77ddff", relief=SOLID
+        )
+        midlevel.pack(side=TOP, pady=5)
+        bottomlvl = Frame(
+            self.form, width=self.w, height=self.h*.2, bd=0,
+            bg="#77ddff",  relief=SOLID
+        )
+        bottomlvl.pack(side=TOP, pady=5)
+        #Labels
+        self.lbl_banner = Label(
+            toplevel,
+            text="Enter your Password:",
+            font=('arial', 14), bd=10, bg="#77ddff"
+        )
+        self.lbl_banner.grid(row=0, columnspan=3)
+        self.lbl_user = Label(
+            midlevel, text='Old Password:', font=('arial', 14),
+            bd=10, bg="#77ddff"
+        )
+        self.lbl_user.grid(row=0, column=0)
+        self.lbl_pass = Label(
+            midlevel, text="New Password:", font=('arial', 14),
+            bd=10, bg="#77ddff"
+        )
+        self.lbl_pass.grid(row=1, column=0)
+        self.lbl_pass = Label(
+            midlevel, text="Confirm Password:", font=('arial', 14),
+            bd=10, bg="#77ddff"
+        )
+        self.lbl_pass.grid(row=2, column=0)
+        #Entry boxes
+        self.old_password = StringVar()
+        self.user = Entry(
+            midlevel, textvariable=self.password,
+            font=('arial', 14), width=18, show="*"
+        )
+        self.user.grid(row=0, column=3)
+        self.pwd = Entry(
+            midlevel, textvariable=self.new_pass,
+            font=('arial', 14), width=18, show="*"
+        )
+        self.pwd.grid(row=1, column=3)
+        self.pwd = Entry(
+            midlevel, textvariable=self.conf_pass,
+            font=('arial', 14), width=18, show="*"
+        )
+        self.pwd.grid(row=2, column=3)
+
+        #Buttons
+        self.log_btn = Button(
+            bottomlvl, text='Confirm',
+            font=('arial', 14), width=15,
+            command=self.change_password
+        )
+        self.log_btn.grid(row=0)
+        self.lbl_warn = Label(
+            bottomlvl, text="", font=('arial', 12), bd=10,
+            bg="#77ddff"
+        )
+        self.lbl_warn.grid(row=1)
+        self.form.bind('<Return>', self.change_password)
+    
+    def change_password(self, event=None):
+        self.database()
+        
+        if (self.password.get() == "" or
+            self.conf_pass.get() == "" or
+            self.new_pass.get() == ""):
+            self.lbl_warn.config(
+                text="Please enter the required values!",
+                fg="red"
+            )
+        elif self.password.get() != self.main.current_user[2]:
+            self.lbl_warn.config(
+                text="Password is incorrect!",
+                fg="red"
+            )
+        elif self.new_pass.get() != self.conf_pass.get():
+            self.lbl_warn.config(
+                text="Password do not match!",
+                fg="red"
+            )
+        elif len(self.new_pass.get()) < 6:
+            self.lbl_warn.config(
+                text="Password should be at least "+
+                "6 characters long!",
+                fg="red"
+            )
+        else:
+            #Search for username from database
+            self.cursor.execute(
+                "SELECT * FROM `Users` WHERE `username` = ?",
+                (self.main.current_user[1],)
+            )
+            if self.cursor.fetchone() is None: #Username not found!
+                self.lbl_warn.config(
+                    text="Account do not exist!",
+                    fg="red"
+                )
+            else: #Check if password match
+                #Search for user&pass from database
+                self.cursor.execute(
+                    "SELECT * FROM `Users` WHERE `username` = ? "+
+                    "AND `password` = ?",
+                    (self.main.current_user[1], self.password.get())
+                )
+                data = self.cursor.fetchone()
+                if data is None: #Username&Password do not match!
+                    self.lbl_warn.config(
+                        text="The password is incorrect!",
+                        fg="red"
+                    )
+                else:
+                    self.cursor.execute(
+                        "UPDATE `Users` SET `password` = ? "+
+                        "WHERE `admin_id` = ?",
+                        (self.new_pass.get(),
+                         self.main.current_user[0])
+                    )
+                    self.conn.commit()
+
+                    #Update current user
+                    self.cursor.execute(
+                        "SELECT * FROM `Users` WHERE `username` = ? "+
+                        "AND `password` = ?",
+                        (self.main.current_user[1], self.new_pass.get())
+                    )
+                    self.main.current_user = self.cursor.fetchone()
+                    
+                    tkMessageBox.showinfo(
+                        "Password changed successfully!",
+                        f"System user {self.main.current_user[1]}'s " +
+                        "password has been successfully changed!"
+                    )
+                    #Destroy form after use
+                    self.reset_form()
+                    self.form.destroy()
+                
+        self.cursor.close()
+        self.conn.close()

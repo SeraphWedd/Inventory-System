@@ -114,7 +114,7 @@ class MainLoop():
             )
             self.accmenu.add_command(
                 label="Change Password",
-                command=None
+                command=self.account.show_change_password
             )
             self.accmenu.add_command(
                 label="View All Users",
