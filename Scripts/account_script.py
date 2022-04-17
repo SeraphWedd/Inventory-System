@@ -16,6 +16,23 @@ class AccountManagement():
         self.lastname = StringVar()
         self.firstname = StringVar()
 
+        self.column_names = [
+            "User ID",
+            "Username",
+            "Password",
+            "Authority",
+            "Last Name",
+            "First Name"
+        ]
+        self.db_entry_names = [
+            'admin_id',
+            'username',
+            'password',
+            'authority',
+            'lastname',
+            'firstname'
+        ]
+
     def database(self, path="Data/login_details.db"):
         #Connect to database
         #Assumes database already exists
@@ -534,7 +551,6 @@ class AccountManagement():
         )
         self.lbl_pass.grid(row=2, column=0)
         #Entry boxes
-        self.old_password = StringVar()
         self.user = Entry(
             midlevel, textvariable=self.password,
             font=('arial', 14), width=18, show="*"
@@ -578,6 +594,11 @@ class AccountManagement():
         elif self.password.get() != self.main.current_user[2]:
             self.lbl_warn.config(
                 text="Password is incorrect!",
+                fg="red"
+            )
+        elif self.main.current_user[1] == "admin":
+            self.lbl_warn.config(
+                text="Cannot change admin default password!",
                 fg="red"
             )
         elif self.new_pass.get() != self.conf_pass.get():
@@ -643,3 +664,129 @@ class AccountManagement():
                 
         self.cursor.close()
         self.conn.close()
+
+    def show_view_all_users(self):
+        
+        if self.main.current_user[3] != 'admin':
+            tkMessageBox.showerror(
+                'Error: Insufficient Authority',
+                "Only admins can view all users!",
+                icon="warning"
+            )
+            return
+            
+        self.form = Toplevel(self.master)
+        self.form.title("View All Users")
+        self.w = self.master.winfo_screenwidth()
+        self.h = self.master.winfo_screenheight()
+        self.form.geometry("%dx%d+%d+%d" %(self.w, self.h, 0, 0))
+        self.form.config(bg="#77ddff")
+        self.form.resizable(1, 1)
+        self.form.state('zoomed')
+        self.master.withdraw()
+        
+        def  on_exit(event):
+            self.master.deiconify()
+            self.master.state('zoomed')
+            
+        self.form.bind("<Destroy>", on_exit)
+        self.view_all_users_form()
+
+    def view_all_users_form(self):
+        #Frames
+        toplevel = Frame(
+            self.form, width=self.w, height=self.h*.1, bd=2,
+            bg="#77ddff", relief=SOLID
+        )
+        toplevel.pack(side=TOP, pady=2)
+        midlevel = Frame(
+            self.form, width=self.w, height=self.h*.8, bd=2,
+            bg="#77ddff", relief=SOLID
+        )
+        midlevel.pack(side=TOP, pady=2)
+        bottomlvl = Frame(
+            self.form, width=self.w, height=self.h*.1, bd=2,
+            bg="#77ddff",  relief=SOLID
+        )
+        bottomlvl.pack(side=TOP, pady=2)
+
+        #Labels
+        self.search_bar = Label(
+            toplevel,
+            text="Search:",
+            font=('arial', 12), bg="#77ddff"
+        )
+        self.search_bar.grid(row=0, column=0)
+
+        #Entry boxes
+        self.search_kwd = StringVar()
+        self.keyword = Entry(
+            toplevel, textvariable=self.search_kwd,
+            font=('arial', 12), width=100
+        )
+        self.keyword.grid(row=0, column=2)
+        
+        #Buttons
+        self.search_btn = Button(
+            toplevel, text='Confirm',
+            font=('arial', 12), width=10,
+            command=self.view_all_users
+        )
+        self.search_btn.grid(row=0, column=10)
+        self.form.bind("<Return>", self.view_all_users)
+
+        #Tree
+        scrollbar_x = Scrollbar(midlevel, orient=HORIZONTAL)
+        scrollbar_y = Scrollbar(midlevel, orient=VERTICAL)
+        
+        self.tree = ttk.Treeview(
+            midlevel,
+            columns=self.column_names,
+            selectmode="extended",
+            height=self.h*0.8,
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set
+        )
+        
+        scrollbar_y.config(command=self.tree.yview)
+        scrollbar_y.pack(side=RIGHT, fill=Y)
+        scrollbar_x.config(command=self.tree.xview)
+        scrollbar_x.pack(side=BOTTOM, fill=X)
+
+        for c in self.column_names:
+            self.tree.heading(c, text=c, anchor=N)
+
+        for i in range(len(self.column_names)+1):
+            if i > 1:
+                self.tree.column(f"#{i}", stretch=NO, minwidth=50, width=200)
+            else:
+                self.tree.column(f"#{i}", stretch=NO, minwidth=0, width=50)
+        self.tree.pack()
+        
+        self.view_all_users()
+        
+    def view_all_users(self, event=None):
+        self.database()
+        self.tree.delete(*self.tree.get_children())
+
+        #Search keyword from all columns
+        kwd = self.search_kwd.get()
+        if kwd != "":
+            search_text = "SELECT * FROM `Users` WHERE ({})".format(
+                " OR ".join(
+                    f"`{col}` LIKE '%{'%'.join(kwd.split())}%'" for
+                    col in self.db_entry_names[1:]
+                )
+            )
+        else:
+            search_text = "SELECT * from `Users`"
+            
+        self.cursor.execute(search_text)
+        
+        for data in self.cursor.fetchall():
+            self.tree.insert('', 'end', values=(data))
+            
+        #self.form.destroy()
+        self.cursor.close()
+        self.conn.close()
+

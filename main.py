@@ -118,7 +118,7 @@ class MainLoop():
             )
             self.accmenu.add_command(
                 label="View All Users",
-                command=None
+                command=self.account.show_view_all_users
             )
             self.menubar.add_cascade(label="Account", menu=self.accmenu)
             
