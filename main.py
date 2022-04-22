@@ -2,6 +2,7 @@ from tkinter import * #Import all
 import tkinter.messagebox as tkMessageBox
 import tkinter.ttk as ttk
 import sqlite3
+import sys
 from PIL import Image, ImageTk
 
 from Scripts.login_script import LoginWindow
@@ -76,7 +77,7 @@ class MainLoop():
         if result == 'yes':
             self._is_logged_in = False
             self.root.destroy()
-            exit()
+            sys.exit()
 
     def reset_menu(self):
         self.menubar = Menu(self.root)
